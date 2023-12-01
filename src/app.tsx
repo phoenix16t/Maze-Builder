@@ -4,8 +4,6 @@ import "./style.scss";
 
 interface CellObject {
   direction: string;
-  group: number;
-  index: string;
   x: string;
   y: string;
 }
@@ -52,12 +50,15 @@ export const App = ({
   );
 
   const deletePossibleMoves = useCallback(
-    ({ index, direction }: CellObject): void => {
+    ({ direction, x, y }: CellObject): void => {
       setPossibleMoves((prevMoves): WallObject => {
         const movesDupe = { ...prevMoves };
-        movesDupe[index].delete(direction);
-        if (movesDupe[index].size === 0) {
-          delete movesDupe[index];
+        const index = `${y}-${x}`;
+        if (movesDupe[index] !== undefined) {
+          movesDupe[index].delete(direction);
+          if (movesDupe[index].size === 0) {
+            delete movesDupe[index];
+          }
         }
         return movesDupe;
       });
@@ -96,13 +97,11 @@ export const App = ({
 
       return {
         direction: Array.from(wallSet)[selectedWallIdx],
-        group: groups[index],
-        index,
         x,
         y,
       };
     },
-    [getRandomValue, groups, possibleMoves],
+    [getRandomValue, possibleMoves],
   );
 
   const getWallSet = useCallback(
@@ -119,7 +118,8 @@ export const App = ({
     [horizontalCount, verticalCount],
   );
 
-  const removeWalls = useCallback(({ index, direction }: CellObject): void => {
+  const removeWalls = useCallback(({ direction, x, y }: CellObject): void => {
+    const index = `${y}-${x}`;
     setVisibleWalls((preVisibleWalls: WallObject): WallObject => {
       const visibleWallsDupe = { ...preVisibleWalls };
       visibleWallsDupe[index].delete(direction);
@@ -129,12 +129,15 @@ export const App = ({
 
   const updateGroups = useCallback(
     ({
-      selected: { group },
+      selected: { x, y },
       neighborGroup,
     }: {
       selected: CellObject;
       neighborGroup: number;
     }): void => {
+      const index = `${y}-${x}`;
+      const group = groups[index];
+
       const updatedGroups = (prevGroups: GroupObject): GroupObject => {
         return Object.entries(prevGroups).reduce(
           (store: GroupObject, [key, currentGroup]): GroupObject => {
@@ -154,7 +157,7 @@ export const App = ({
 
       setGroups((prevGroups): GroupObject => updatedGroups(prevGroups));
     },
-    [],
+    [groups],
   );
 
   const stepBuilder = useCallback((): void => {
@@ -165,9 +168,10 @@ export const App = ({
     const randomVal = getRandomValue(Object.entries(possibleMoves).length);
     const selected = getSelectedCell(randomVal);
     const neighborGroup = getNeighborGroup(selected);
+    const index = `${selected.y}-${selected.x}`;
 
     deletePossibleMoves(selected);
-    if (selected.group === neighborGroup) {
+    if (groups[index] === neighborGroup) {
       return stepBuilder();
     }
     updateGroups({ selected, neighborGroup });
@@ -177,6 +181,7 @@ export const App = ({
     getNeighborGroup,
     getRandomValue,
     getSelectedCell,
+    groups,
     hasMultipleGroups,
     possibleMoves,
     removeWalls,
@@ -222,7 +227,9 @@ export const App = ({
               visibleWalls[index] === undefined ? [] : visibleWalls[index];
             const wallsArray = Array.from(currentWalls);
             const cls = `cell ${wallsArray.join(" ")}`;
-            return <li className={cls} style={cellStyle({ x, y })} />;
+            return (
+              <li className={cls} key={index} style={cellStyle({ x, y })} />
+            );
           }),
         )}
       </ul>
