@@ -3,26 +3,24 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import "./style.scss";
 
 interface CellObject {
-  direction: string;
-  x: string;
-  y: string;
-}
-
-interface CellObject2 {
-  x: string | number;
-  y: string | number;
   group: number;
   walls: Set<string>;
   moves?: Set<string>;
 }
 
 interface Cells {
-  [key: string]: CellObject2;
+  [key: string]: CellObject;
 }
 
 interface CellStyle {
   backgroundColor: string;
   width: string;
+}
+
+interface SelectionObject {
+  direction: string;
+  x: string;
+  y: string;
 }
 
 export const App = ({
@@ -50,7 +48,7 @@ export const App = ({
     }, {} as Cells);
   }, [cells]);
 
-  const availableMovesLength = useMemo(() => {
+  const availableMovesCount = useMemo(() => {
     return Object.keys(availableMoves).length;
   }, [availableMoves]);
 
@@ -67,7 +65,7 @@ export const App = ({
   );
 
   const deletePossibleMoves = useCallback(
-    ({ direction, x, y }: CellObject): void => {
+    ({ direction, x, y }: SelectionObject): void => {
       setCells((prevCells) => {
         const cellsDupe = { ...prevCells };
         const index = `${y}-${x}`;
@@ -84,7 +82,7 @@ export const App = ({
   );
 
   const getNeighborGroup = useCallback(
-    ({ direction, x, y }: CellObject): number => {
+    ({ direction, x, y }: SelectionObject): number => {
       const neighborX = direction === "e" ? +x + 1 : x;
       const neighborY = direction === "s" ? +y + 1 : y;
       const index = `${neighborY}-${neighborX}`;
@@ -107,7 +105,7 @@ export const App = ({
   }, [getRandomValue]);
 
   const getSelectedCell = useCallback(
-    (randomVal: number): CellObject => {
+    (randomVal: number): SelectionObject => {
       const [index, cell] = Object.entries(availableMoves)[randomVal];
       const [y, x] = index.split("-");
       const selectedWallIdx = getRandomValue(cell.walls.size);
@@ -135,15 +133,15 @@ export const App = ({
   );
 
   const removeWalls = useCallback(
-    ({ direction, x, y }: CellObject): void => {
+    ({ direction, x, y }: SelectionObject): void => {
       const index = `${y}-${x}`;
       setCells((prevCells) => {
         const cellDupe = { ...prevCells };
-        cells[index].walls.delete(direction);
+        prevCells[index].walls.delete(direction);
         return cellDupe;
       });
     },
-    [cells],
+    [],
   );
 
   const updateGroups = useCallback(
@@ -151,7 +149,7 @@ export const App = ({
       selected: { x, y },
       neighborGroup,
     }: {
-      selected: CellObject;
+      selected: SelectionObject;
       neighborGroup: number;
     }): void => {
       const index = `${y}-${x}`;
@@ -181,7 +179,7 @@ export const App = ({
       return;
     }
 
-    const randomVal = getRandomValue(availableMovesLength);
+    const randomVal = getRandomValue(availableMovesCount);
     const selected = getSelectedCell(randomVal);
     const neighborGroup = getNeighborGroup(selected);
     const index = `${selected.y}-${selected.x}`;
@@ -194,7 +192,7 @@ export const App = ({
     updateGroups({ selected, neighborGroup });
     removeWalls(selected);
   }, [
-    availableMovesLength,
+    availableMovesCount,
     cells,
     deletePossibleMoves,
     getNeighborGroup,
@@ -218,8 +216,6 @@ export const App = ({
         const index = `${y}-${x}`;
 
         newCells[index] = {
-          x,
-          y,
           group: x + y * verticalCount,
           moves: new Set(),
           walls: new Set(),
