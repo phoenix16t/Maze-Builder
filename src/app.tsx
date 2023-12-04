@@ -89,9 +89,9 @@ export const App = ({
     (randomVal: number): SelectionObject => {
       const { x, y } = availableMoves[randomVal];
       const cell = cells[y][x];
-      const selectedWallIdx = getRandomValue(cell.walls.size);
+      const selectionWallIdx = getRandomValue(cell.walls.size);
       return {
-        direction: Array.from(cell.walls)[selectedWallIdx],
+        direction: Array.from(cell.walls)[selectionWallIdx],
         x,
         y,
       };
@@ -134,13 +134,13 @@ export const App = ({
 
   const updateGroups = useCallback(
     ({
-      selected: { x, y },
+      selection: { x, y },
       neighborGroup,
     }: {
-      selected: SelectionObject;
+      selection: SelectionObject;
       neighborGroup: number;
     }): void => {
-      const selectedGroup = cells[y][x].group;
+      const selectionGroup = cells[y][x].group;
 
       const updatedCells = (prevCells: Cells): Cells => {
         return prevCells.map((column) =>
@@ -148,12 +148,12 @@ export const App = ({
             const cellCopy = { ...cell };
             if (
               cellCopy.group === neighborGroup &&
-              selectedGroup < neighborGroup
+              selectionGroup < neighborGroup
             ) {
-              cellCopy.group = selectedGroup;
+              cellCopy.group = selectionGroup;
             } else if (
-              cellCopy.group === selectedGroup &&
-              neighborGroup < selectedGroup
+              cellCopy.group === selectionGroup &&
+              neighborGroup < selectionGroup
             ) {
               cellCopy.group = neighborGroup;
             }
@@ -177,14 +177,14 @@ export const App = ({
     }
 
     const randomVal = getRandomValue(availableMoves.length);
-    const selected = getRandomSelection(randomVal);
-    const neighborGroup = getNeighborGroup(selected);
-    deletePossibleMoves(selected);
-    if (cells[selected.y][selected.x].group === neighborGroup) {
+    const selection = getRandomSelection(randomVal);
+    const neighborGroup = getNeighborGroup(selection);
+    deletePossibleMoves(selection);
+    if (cells[selection.y][selection.x].group === neighborGroup) {
       return step();
     }
-    updateGroups({ selected, neighborGroup });
-    removeWalls(selected);
+    updateGroups({ selection, neighborGroup });
+    removeWalls(selection);
   }, [
     availableMoves.length,
     cells,
