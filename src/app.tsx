@@ -8,20 +8,21 @@ interface CellObject {
   moves?: Set<string>;
 }
 
-interface Cells {
-  [key: string]: CellObject;
-}
-
 interface CellStyle {
   backgroundColor: string;
   width: string;
 }
 
-interface SelectionObject {
-  direction: string;
-  x: string;
-  y: string;
+interface Coordinates {
+  x: number;
+  y: number;
 }
+
+interface SelectionObject extends Coordinates {
+  direction: string;
+}
+
+type Cells = CellObject[][];
 
 export const App = ({
   horizontalCount = 4,
@@ -31,29 +32,23 @@ export const App = ({
   verticalCount?: number;
 }): JSX.Element => {
   const [colors, setColors] = useState<string[]>([]);
-  const [cells, setCells] = useState<Cells>({});
+  const [cells, setCells] = useState<Cells>([]);
+
+  const availableMoves = useMemo((): Coordinates[] => {
+    return cells.flatMap((column, y) =>
+      column
+        .map((cell, x) => ({ cell, x, y }))
+        .filter(({ cell }) => cell.moves !== undefined && cell.moves.size > 0),
+    );
+  }, [cells]);
 
   const hasMultipleGroups = useMemo((): boolean => {
-    return Object.values(cells).some((c) => c.group > 0);
+    return cells.some((column) => column.some((cell) => cell.group > 0));
   }, [cells]);
-
-  const availableMoves = useMemo(() => {
-    return Object.entries(cells).reduce((store, [index, cell]) => {
-      if (cell.walls.size > 0) {
-        store[index] = cell;
-      }
-      return store;
-    }, {} as Cells);
-  }, [cells]);
-
-  const availableMovesCount = useMemo(() => {
-    return Object.keys(availableMoves).length;
-  }, [availableMoves]);
 
   const cellStyle = useCallback(
     ({ x, y }: { x: number; y: number }): CellStyle => {
-      const index = `${y}-${x}`;
-      const group = cells[index]?.group ?? 0;
+      const group = cells[y]?.[x]?.group ?? 0;
       return {
         backgroundColor: colors[group],
         width: `${100 / horizontalCount}%`,
@@ -65,15 +60,12 @@ export const App = ({
   const deletePossibleMoves = useCallback(
     ({ direction, x, y }: SelectionObject): void => {
       setCells((prevCells) => {
-        const cellsDupe = { ...prevCells };
-        const index = `${y}-${x}`;
-
-        cellsDupe[index].moves?.delete(direction);
-        if (cellsDupe[index].moves?.size === 0) {
-          delete cellsDupe[index].moves;
+        const cellsCopy = [...prevCells];
+        cellsCopy[y][x].moves?.delete(direction);
+        if (cellsCopy[y][x].moves?.size === 0) {
+          delete cellsCopy[y][x].moves;
         }
-
-        return cellsDupe;
+        return cellsCopy;
       });
     },
     [],
@@ -83,9 +75,8 @@ export const App = ({
     ({ direction, x, y }: SelectionObject): number => {
       const neighborX = direction === "e" ? +x + 1 : x;
       const neighborY = direction === "s" ? +y + 1 : y;
-      const index = `${neighborY}-${neighborX}`;
 
-      return cells[index].group;
+      return cells[neighborY][neighborX].group;
     },
     [cells],
   );
@@ -94,18 +85,10 @@ export const App = ({
     return Math.floor(Math.random() * length);
   }, []);
 
-  const generateColor = useCallback((): string => {
-    const r = Math.floor(getRandomValue(256));
-    const g = Math.floor(getRandomValue(256));
-    const b = Math.floor(getRandomValue(256));
-
-    return `rgb(${r}, ${g}, ${b})`;
-  }, [getRandomValue]);
-
-  const getSelectedCell = useCallback(
+  const getRandomSelection = useCallback(
     (randomVal: number): SelectionObject => {
-      const [index, cell] = Object.entries(availableMoves)[randomVal];
-      const [y, x] = index.split("-");
+      const { x, y } = availableMoves[randomVal];
+      const cell = cells[y][x];
       const selectedWallIdx = getRandomValue(cell.walls.size);
       return {
         direction: Array.from(cell.walls)[selectedWallIdx],
@@ -113,8 +96,16 @@ export const App = ({
         y,
       };
     },
-    [availableMoves, getRandomValue],
+    [availableMoves, cells, getRandomValue],
   );
+
+  const generateColor = useCallback((): string => {
+    const r = Math.floor(getRandomValue(256));
+    const g = Math.floor(getRandomValue(256));
+    const b = Math.floor(getRandomValue(256));
+
+    return `rgb(${r}, ${g}, ${b})`;
+  }, [getRandomValue]);
 
   const getWallSet = useCallback(
     ({ x, y }: { x: number; y: number }): Set<string> => {
@@ -132,10 +123,9 @@ export const App = ({
 
   const removeWalls = useCallback(
     ({ direction, x, y }: SelectionObject): void => {
-      const index = `${y}-${x}`;
       setCells((prevCells) => {
-        const cellDupe = { ...prevCells };
-        prevCells[index].walls.delete(direction);
+        const cellDupe = [...prevCells];
+        cellDupe[y][x].walls.delete(direction);
         return cellDupe;
       });
     },
@@ -150,21 +140,27 @@ export const App = ({
       selected: SelectionObject;
       neighborGroup: number;
     }): void => {
-      const index = `${y}-${x}`;
-      const selectedGroup = cells[index].group;
+      const selectedGroup = cells[y][x].group;
 
       const updatedCells = (prevCells: Cells): Cells => {
-        return Object.entries(prevCells).reduce((store, [key, cell]) => {
-          store[key] = { ...cell };
-          const { group } = store[key];
-          if (group === neighborGroup && selectedGroup < neighborGroup) {
-            store[key].group = selectedGroup;
-          } else if (group === selectedGroup && neighborGroup < selectedGroup) {
-            store[key].group = neighborGroup;
-          }
+        return prevCells.map((column) =>
+          column.map((cell) => {
+            const cellCopy = { ...cell };
+            if (
+              cellCopy.group === neighborGroup &&
+              selectedGroup < neighborGroup
+            ) {
+              cellCopy.group = selectedGroup;
+            } else if (
+              cellCopy.group === selectedGroup &&
+              neighborGroup < selectedGroup
+            ) {
+              cellCopy.group = neighborGroup;
+            }
 
-          return store;
-        }, {} as Cells);
+            return cellCopy;
+          }),
+        );
       };
 
       setCells((prevCells) => updatedCells(prevCells));
@@ -172,57 +168,65 @@ export const App = ({
     [cells],
   );
 
-  const stepBuilder = useCallback((): void => {
+  /////////////////////////
+  // action
+  /////////////////////////
+  const step = useCallback((): void => {
     if (!hasMultipleGroups) {
       return;
     }
 
-    const randomVal = getRandomValue(availableMovesCount);
-    const selected = getSelectedCell(randomVal);
+    const randomVal = getRandomValue(availableMoves.length);
+    const selected = getRandomSelection(randomVal);
     const neighborGroup = getNeighborGroup(selected);
-    const index = `${selected.y}-${selected.x}`;
-
     deletePossibleMoves(selected);
-    if (cells[index].group === neighborGroup) {
-      return stepBuilder();
+    if (cells[selected.y][selected.x].group === neighborGroup) {
+      return step();
     }
     updateGroups({ selected, neighborGroup });
     removeWalls(selected);
   }, [
-    availableMovesCount,
+    availableMoves.length,
     cells,
     deletePossibleMoves,
     getNeighborGroup,
     getRandomValue,
-    getSelectedCell,
+    getRandomSelection,
     hasMultipleGroups,
     removeWalls,
     updateGroups,
   ]);
 
   const handleClick = useCallback((): void => {
-    stepBuilder();
-  }, [stepBuilder]);
+    step();
+  }, [step]);
 
+  /////////////////////////
+  // setup
+  /////////////////////////
   useEffect((): void => {
+    const newCells: Cells = [];
     const newColors: string[] = [];
-    const newCells: Cells = {};
 
     Array.from(Array(verticalCount).keys()).map((y) =>
       Array.from(Array(horizontalCount).keys()).map((x) => {
-        const index = `${y}-${x}`;
         const set = getWallSet({ x, y });
-        newCells[index] = {
+
+        const obj = {
           group: x + y * verticalCount,
           moves: new Set(set),
           walls: set,
         };
+
+        newCells[y] = newCells[y] ?? [];
+        newCells[y].push(obj);
+
         newColors.push(generateColor());
       }),
     );
 
-    setColors(newColors);
     setCells(newCells);
+    setColors(newColors);
   }, [generateColor, getWallSet, horizontalCount, verticalCount]);
 
   return (
@@ -231,12 +235,15 @@ export const App = ({
       <ul className="app">
         {Array.from(Array(verticalCount).keys()).map((y) =>
           Array.from(Array(horizontalCount).keys()).map((x) => {
-            const index = `${y}-${x}`;
-            const currentWalls = cells[index]?.walls ?? [];
+            const currentWalls = cells[y]?.[x]?.walls ?? [];
             const wallsArray = Array.from(currentWalls);
             const cls = `cell ${wallsArray.join(" ")}`;
             return (
-              <li className={cls} key={index} style={cellStyle({ x, y })} />
+              <li
+                className={cls}
+                key={`${y}-${x}`}
+                style={cellStyle({ x, y })}
+              />
             );
           }),
         )}
