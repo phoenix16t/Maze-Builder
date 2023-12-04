@@ -30,8 +30,6 @@ export const App = ({
   horizontalCount?: number;
   verticalCount?: number;
 }): JSX.Element => {
-  // console.log("\n\n\n");
-
   const [colors, setColors] = useState<string[]>([]);
   const [cells, setCells] = useState<Cells>({});
 
@@ -186,7 +184,6 @@ export const App = ({
 
     deletePossibleMoves(selected);
     if (cells[index].group === neighborGroup) {
-      // console.log("--- restarting", cells);
       return stepBuilder();
     }
     updateGroups({ selected, neighborGroup });
@@ -214,21 +211,12 @@ export const App = ({
     Array.from(Array(verticalCount).keys()).map((y) =>
       Array.from(Array(horizontalCount).keys()).map((x) => {
         const index = `${y}-${x}`;
-
+        const set = getWallSet({ x, y });
         newCells[index] = {
           group: x + y * verticalCount,
-          moves: new Set(),
-          walls: new Set(),
+          moves: new Set(set),
+          walls: set,
         };
-
-        if (y !== verticalCount - 1 || x !== horizontalCount - 1) {
-          const set = getWallSet({ x, y });
-          newCells[index] = {
-            ...newCells[index],
-            moves: new Set(set),
-            walls: set,
-          };
-        }
         newColors.push(generateColor());
       }),
     );
@@ -236,8 +224,6 @@ export const App = ({
     setColors(newColors);
     setCells(newCells);
   }, [generateColor, getWallSet, horizontalCount, verticalCount]);
-
-  // console.log("cells", cells, availableMoves);
 
   return (
     <>
