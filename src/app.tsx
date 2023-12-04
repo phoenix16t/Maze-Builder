@@ -25,12 +25,15 @@ interface SelectionObject extends Coordinates {
 type Cells = CellObject[][];
 
 export const App = ({
-  horizontalCount = 4,
-  verticalCount = 4,
+  delay,
+  horizontalCount = 30,
+  verticalCount = 30,
 }: {
+  delay?: number;
   horizontalCount?: number;
   verticalCount?: number;
 }): JSX.Element => {
+  const [actualDelay, setActualDelay] = useState(delay);
   const [colors, setColors] = useState<string[]>([]);
   const [cells, setCells] = useState<Cells>([]);
 
@@ -186,7 +189,7 @@ export const App = ({
     updateGroups({ selection, neighborGroup });
     removeWalls(selection);
   }, [
-    availableMoves.length,
+    availableMoves,
     cells,
     deletePossibleMoves,
     getNeighborGroup,
@@ -197,9 +200,19 @@ export const App = ({
     updateGroups,
   ]);
 
+  /////////////////////////
+  // controls
+  /////////////////////////
   const handleClick = useCallback((): void => {
+    setActualDelay(undefined);
     step();
   }, [step]);
+
+  useEffect(() => {
+    if (actualDelay !== undefined && cells.length > 0) {
+      setTimeout(step, actualDelay);
+    }
+  }, [actualDelay, cells.length, step]);
 
   /////////////////////////
   // setup
