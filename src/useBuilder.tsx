@@ -11,15 +11,15 @@ import {
 export const useBuilder = ({
   cells,
   colors,
-  horizontalCount = 30,
+  horizontalCount,
   setCells,
-  verticalCount = 30,
+  verticalCount,
 }: {
   cells: CellsObject;
   colors: string[];
-  horizontalCount?: number;
+  horizontalCount: number;
   setCells: React.Dispatch<React.SetStateAction<CellsObject>>;
-  verticalCount?: number;
+  verticalCount: number;
 }): BuilderObject => {
   const availableMoves = useMemo((): CoordinatesObject[] => {
     return cells.flatMap((column, y) =>
