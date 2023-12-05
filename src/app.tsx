@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import { getRandomValue } from "helpers";
 import { CellsObject } from "types";
@@ -15,9 +15,10 @@ export const App = ({
   horizontalCount?: number;
   verticalCount?: number;
 }): JSX.Element => {
-  const [actualDelay, setActualDelay] = useState(delay);
+  const [actualDelay, setActualDelay] = useState<number | undefined>(delay);
   const [colors, setColors] = useState<string[]>([]);
   const [cells, setCells] = useState<CellsObject>([]);
+  const timer = useRef<NodeJS.Timeout | undefined>(undefined);
   const {
     availableMoves,
     hasMultipleGroups,
@@ -36,6 +37,7 @@ export const App = ({
     setCells,
     verticalCount,
   });
+
   /////////////////////////
   // action
   /////////////////////////
@@ -74,7 +76,8 @@ export const App = ({
 
   useEffect(() => {
     if (actualDelay !== undefined && cells.length > 0) {
-      setTimeout(step, actualDelay);
+      clearTimeout(timer.current);
+      timer.current = setTimeout(step, actualDelay);
     }
   }, [actualDelay, cells.length, step]);
 
