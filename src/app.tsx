@@ -9,13 +9,15 @@ import "./style.scss";
 export const App = ({
   delay,
   horizontalCount = 30,
+  stepCounter,
   verticalCount = 30,
 }: {
   delay?: number;
   horizontalCount?: number;
+  stepCounter?: number;
   verticalCount?: number;
 }): JSX.Element => {
-  const [actualDelay, setActualDelay] = useState<number | undefined>(delay);
+  const [actualDelay, setActualDelay] = useState(delay);
   const [colors, setColors] = useState<string[]>([]);
   const [cells, setCells] = useState<CellsObject>([]);
   const timer = useRef<NodeJS.Timeout | undefined>(undefined);
@@ -69,22 +71,27 @@ export const App = ({
   /////////////////////////
   // controls
   /////////////////////////
-  const handleClick = useCallback((): void => {
-    setActualDelay(undefined);
-    step();
-  }, [step]);
-
   useEffect(() => {
     if (actualDelay !== undefined && cells.length > 0) {
       clearTimeout(timer.current);
-      timer.current = setTimeout(step, actualDelay);
+      timer.current = setTimeout(step, delay);
     }
-  }, [actualDelay, cells.length, step]);
+  }, [actualDelay, cells.length, delay, step]);
+
+  useEffect(() => {
+    if (delay !== -1) {
+      return setActualDelay(delay);
+    }
+    setActualDelay(undefined);
+    step();
+  }, [delay, step, stepCounter]);
 
   /////////////////////////
   // setup
   /////////////////////////
   useEffect((): void => {
+    clearTimeout(timer.current);
+
     const newCells: CellsObject = [];
     const newColors: string[] = [];
 
@@ -110,24 +117,17 @@ export const App = ({
   }, [generateColor, getWallSet, horizontalCount, verticalCount]);
 
   return (
-    <>
-      <button onClick={handleClick}>step </button>
-      <ul className="app">
-        {Array.from(Array(verticalCount).keys()).map((y) =>
-          Array.from(Array(horizontalCount).keys()).map((x) => {
-            const currentWalls = cells[y]?.[x]?.walls ?? [];
-            const wallsArray = Array.from(currentWalls);
-            const cls = `cell ${wallsArray.join(" ")}`;
-            return (
-              <li
-                className={cls}
-                key={`${y}-${x}`}
-                style={cellStyle({ x, y })}
-              />
-            );
-          }),
-        )}
-      </ul>
-    </>
+    <ul className="app">
+      {Array.from(Array(verticalCount).keys()).map((y) =>
+        Array.from(Array(horizontalCount).keys()).map((x) => {
+          const currentWalls = cells[y]?.[x]?.walls ?? [];
+          const wallsArray = Array.from(currentWalls);
+          const cls = `cell ${wallsArray.join(" ")}`;
+          return (
+            <li className={cls} key={`${y}-${x}`} style={cellStyle({ x, y })} />
+          );
+        }),
+      )}
+    </ul>
   );
 };
