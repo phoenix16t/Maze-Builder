@@ -7,7 +7,7 @@ import { useBuilder } from "useBuilder";
 import "./style.scss";
 
 export const App = ({
-  delay,
+  delay = -1,
   horizontalCount = 30,
   stepCounter,
   verticalCount = 30,
@@ -20,6 +20,7 @@ export const App = ({
   const [actualDelay, setActualDelay] = useState(delay);
   const [colors, setColors] = useState<string[]>([]);
   const [cells, setCells] = useState<CellsObject>([]);
+  const currentStep = useRef<number>(0);
   const timer = useRef<NodeJS.Timeout | undefined>(undefined);
   const {
     availableMoves,
@@ -51,6 +52,7 @@ export const App = ({
     const randomVal = getRandomValue(availableMoves.length);
     const selection = getRandomSelection(randomVal);
     const neighborGroup = getNeighborGroup(selection);
+
     deletePossibleMoves(selection);
     if (cells[selection.y][selection.x].group === neighborGroup) {
       return step();
@@ -71,20 +73,33 @@ export const App = ({
   /////////////////////////
   // controls
   /////////////////////////
+  // manual trigger
   useEffect(() => {
-    if (actualDelay !== undefined && cells.length > 0) {
-      clearTimeout(timer.current);
-      timer.current = setTimeout(step, delay);
+    if (stepCounter !== undefined && currentStep.current !== stepCounter) {
+      currentStep.current = stepCounter;
+      setActualDelay(-1);
+      step();
     }
-  }, [actualDelay, cells.length, delay, step]);
+  }, [step, stepCounter]);
 
+  // start auto run
   useEffect(() => {
     if (delay !== -1) {
-      return setActualDelay(delay);
+      setActualDelay(delay);
     }
-    setActualDelay(undefined);
-    step();
-  }, [delay, step, stepCounter]);
+  }, [delay]);
+
+  // auto run
+  useEffect(() => {
+    if (actualDelay !== -1 && cells.length > 0) {
+      clearTimeout(timer.current);
+      timer.current = setTimeout(step, actualDelay);
+    }
+
+    return () => {
+      clearTimeout(timer.current);
+    };
+  }, [actualDelay, cells.length, step]);
 
   /////////////////////////
   // setup
@@ -114,7 +129,14 @@ export const App = ({
 
     setCells(newCells);
     setColors(newColors);
-  }, [generateColor, getWallSet, horizontalCount, verticalCount]);
+  }, [
+    generateColor,
+    getWallSet,
+    horizontalCount,
+    setCells,
+    timer,
+    verticalCount,
+  ]);
 
   return (
     <ul className="app">

@@ -125,7 +125,7 @@ export const useBuilder = ({
     }): void => {
       const selectionGroup = cells[y][x].group;
 
-      const updatedCells = (prevCells: CellsObject): CellsObject => {
+      const updateCells = (prevCells: CellsObject): CellsObject => {
         return prevCells.map((column) =>
           column.map((cell) => {
             const cellCopy = { ...cell };
@@ -146,7 +146,7 @@ export const useBuilder = ({
         );
       };
 
-      setCells((prevCells) => updatedCells(prevCells));
+      setCells((prevCells) => updateCells(prevCells));
     },
     [cells, setCells],
   );
